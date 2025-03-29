@@ -5,14 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matching Game</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        #game { display: none; }
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #game, #leaderboard { display: none; }
         .btn { padding: 10px 20px; margin: 10px; cursor: pointer; }
-        .match-box { display: inline-block; margin: 10px; padding: 20px; border: 1px solid #ccc; width: 100px; text-align: center; }
+        .match-box { display: inline-block; margin: 10px; padding: 20px; border: 1px solid #ccc; width: 100px; text-align: center; cursor: pointer; }
         .incorrect { color: red; }
-        .correct { color: green; }
-        #leaderboard { display: none; }
-        #leaderboard table { width: 100%; border-collapse: collapse; }
+        #leaderboard table { width: 50%; margin: auto; border-collapse: collapse; }
         #leaderboard th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
     </style>
 </head>
@@ -48,20 +46,21 @@
         let timer;
         let studentName;
         let score = 0;
-        let correctAnswers = {
-            "Red": "octopus",
-            "Blue": "blueberry",
-            "Orange": "cat"
-        };
+        let correctAnswers = { "Red": "octopus", "Blue": "blueberry", "Orange": "cat" };
         let answers = ["Red", "Blue", "Orange", "octopus", "blueberry", "cat"];
-        let leaderboard = [];
+        let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
 
         function startGame() {
-            studentName = document.getElementById("name").value;
+            studentName = document.getElementById("name").value.trim();
             if (!studentName) {
                 alert("Please enter your name.");
                 return;
             }
+            if (leaderboard.some(player => player.name === studentName)) {
+                alert("You have already played!");
+                return;
+            }
+
             document.getElementById("nameInput").style.display = "none";
             document.getElementById("game").style.display = "block";
             shuffleAnswers();
@@ -74,12 +73,14 @@
         }
 
         function startTimer() {
-            timer = setInterval(function() {
+            timeLeft = 10;
+            document.getElementById("time").textContent = timeLeft;
+            timer = setInterval(() => {
                 timeLeft--;
                 document.getElementById("time").textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    checkResults();
+                    checkResults(false);
                 }
             }, 1000);
         }
@@ -103,34 +104,44 @@
         function checkMatching() {
             let [first, second] = selectedAnswers;
             if (correctAnswers[first] === second || correctAnswers[second] === first) {
-                score += timeLeft;
                 document.getElementById("incorrectMessage").style.display = "none";
-                checkResults();
+                checkResults(true);
             } else {
                 document.getElementById("incorrectMessage").style.display = "block";
                 selectedAnswers = [];
             }
         }
 
-        function checkResults() {
+        function checkResults(success) {
             clearInterval(timer);
-            if (selectedAnswers.length < 2) {
+            if (!success) {
                 score = 0;
+            } else {
+                score = 10 + timeLeft;
             }
+
             leaderboard.push({ name: studentName, score: score });
-            leaderboard.sort((a, b) => b.score - a.score);  // Sort descending
+            leaderboard.sort((a, b) => b.score - a.score);
+            localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
             displayLeaderboard();
         }
 
         function displayLeaderboard() {
             document.getElementById("game").style.display = "none";
             document.getElementById("leaderboard").style.display = "block";
-            let leaderboardHTML = '';
-            leaderboard.forEach(entry => {
-                leaderboardHTML += `<tr><td>${entry.name}</td><td>${entry.score}</td></tr>`;
-            });
+            let leaderboardHTML = leaderboard.map(player => `<tr><td>${player.name}</td><td>${player.score}</td></tr>`).join("");
             document.getElementById("leaderboardTable").innerHTML = leaderboardHTML;
         }
+
+        function loadLeaderboard() {
+            if (leaderboard.length > 0) {
+                document.getElementById("leaderboard").style.display = "block";
+                displayLeaderboard();
+            }
+        }
+
+        loadLeaderboard();
     </script>
 </body>
 </html>
